@@ -1,10 +1,10 @@
 import torch
 import os
-from modules.models.model import Model
-from modules.nn import util as nn_util
-from modules.training import util as training_util
-from modules.common.tqdm import Tqdm
-from modules.common.checks import ConfigurationError
+from core.models.model import Model
+from core.nn import util as nn_util
+from core.training import util as training_util
+from core.common.tqdm import Tqdm
+from core.common.checks import ConfigurationError
 import numpy as np
 import matplotlib.pyplot as plt
 import config

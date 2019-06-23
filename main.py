@@ -2,15 +2,17 @@ import logging
 import os
 import sys
 import torch
+import shutil
 import torchvision
 import torchvision.transforms as transforms
 
-from modules.training.trainer import Trainer
-from modules.models.model import Model
-from modules.training.temperature_schedulers import InverseTimestepDecay
-from cifar10.simple_model import SimpleModel
+from core.training.trainer import Trainer
+from core.models.model import Model
+from core.training.temperature_schedulers import InverseTimestepDecay
+from cifar10.model import CifarModel
 from cifar10.util import get_train_validation_loader, get_test_loader
 from cifar10.predictor import Predictor
+from cifar10.modules import SimpleConvNet
 
 import config
 
@@ -28,7 +30,8 @@ else:
     similarity_vectors_fn = None
     temperature_scheduler = None
 
-model = SimpleModel(similarity_vectors_fn=similarity_vectors_fn)
+core_module = SimpleConvNet(num_classes=len(config.CLASS_LIST))
+model = CifarModel(core_module=core_module, similarity_vectors_fn=similarity_vectors_fn)
 
 if torch.cuda.is_available():
     cuda_device = 0
@@ -38,6 +41,9 @@ else:
     cuda_device = -1
 
 optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+
+if config.CLEAN_CHECKPOINTS_PATH:
+    shutil.rmtree(config.CHECKPOINTS_PATH)
 
 trainer = Trainer(
     model,

@@ -1,2 +1,0 @@
-from modules.training.metrics.categorical_accuracy import CategoricalAccuracy
-from modules.training.metrics.average import Average
