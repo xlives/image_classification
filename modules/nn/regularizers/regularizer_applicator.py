@@ -3,7 +3,7 @@ from typing import Sequence, Tuple, Optional, Iterable
 
 import torch
 
-from allennlp.nn.regularizers.regularizer import Regularizer
+from modules.nn.regularizers.regularizer import Regularizer
 
 
 class RegularizerApplicator:

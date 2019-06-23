@@ -20,9 +20,6 @@ except ImportError:
 
 import torch
 import numpy
-import spacy
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language as SpacyModelType
 
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
@@ -33,14 +30,6 @@ from modules.common.tee_logger import TeeLogger
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
-
-# If you want to have start and/or end symbols for any reason in your code, we recommend you use
-# these, to have a common place to import from.  Also, it's important for some edge cases in how
-# data is processed for these symbols to be lowercase, not uppercase (because we have code that
-# will lowercase tokens for you in some circumstances, and we need this symbol to not change in
-# those cases).
-START_SYMBOL = '@start@'
-END_SYMBOL = '@end@'
 
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
@@ -63,9 +52,6 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    # elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
-    #     # Tokens get sanitized to just their text.
-    #     return x.text
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
@@ -101,49 +87,6 @@ def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     """
     return iter(lambda: list(islice(iterator, 0, group_size)), [])
 
-def pad_sequence_to_length(sequence: List,
-                           desired_length: int,
-                           default_value: Callable[[], Any] = lambda: 0,
-                           padding_on_right: bool = True) -> List:
-    """
-    Take a list of objects and pads it to the desired length, returning the padded list.  The
-    original list is not modified.
-
-    Parameters
-    ----------
-    sequence : List
-        A list of objects to be padded.
-
-    desired_length : int
-        Maximum length of each sequence. Longer sequences are truncated to this length, and
-        shorter ones are padded to it.
-
-    default_value: Callable, default=lambda: 0
-        Callable that outputs a default value (of any type) to use as padding values.  This is
-        a lambda to avoid using the same object when the default value is more complex, like a
-        list.
-
-    padding_on_right : bool, default=True
-        When we add padding tokens (or truncate the sequence), should we do it on the right or
-        the left?
-
-    Returns
-    -------
-    padded_sequence : List
-    """
-    # Truncates the sequence to the desired length.
-    if padding_on_right:
-        padded_sequence = sequence[:desired_length]
-    else:
-        padded_sequence = sequence[-desired_length:]
-    # Continues to pad with default_value() until we reach the desired length.
-    for _ in range(desired_length - len(padded_sequence)):
-        if padding_on_right:
-            padded_sequence.append(default_value())
-        else:
-            padded_sequence.insert(0, default_value())
-    return padded_sequence
-
 
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
@@ -157,19 +100,6 @@ def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> 
         noise = random.uniform(-noise_value, noise_value)
         new_dict[key] = value + noise
     return new_dict
-
-
-def namespace_match(pattern: str, namespace: str):
-    """
-    Matches a namespace pattern against a namespace string.  For example, ``*tags`` matches
-    ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
-    ``stemmed_tokens``.
-    """
-    if pattern[0] == '*' and namespace.endswith(pattern[1:]):
-        return True
-    elif pattern == namespace:
-        return True
-    return False
 
 
 def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
@@ -233,44 +163,6 @@ def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
     if isinstance(sys.stderr, TeeLogger):
         sys.stderr = sys.stderr.cleanup()
 
-LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
-
-
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
-    """
-    In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
-    keyed by the options we used to create the spacy model, so any particular configuration only
-    gets loaded once.
-    """
-
-    options = (spacy_model_name, pos_tags, parse, ner)
-    if options not in LOADED_SPACY_MODELS:
-        disable = ['vectors', 'textcat']
-        if not pos_tags:
-            disable.append('tagger')
-        if not parse:
-            disable.append('parser')
-        if not ner:
-            disable.append('ner')
-        try:
-            spacy_model = spacy.load(spacy_model_name, disable=disable)
-        except OSError:
-            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
-            spacy_download(spacy_model_name)
-            # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
-            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
-            # packages that were installed in the same python session, so the way `spacy_download`
-            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
-            # at some point in the future, once spacy has figured out a better way to handle this.
-            # See https://github.com/explosion/spaCy/issues/3435.
-            from spacy.cli import link
-            from spacy.util import get_package_path
-            package_path = get_package_path(spacy_model_name)
-            link(spacy_model_name, spacy_model_name, model_path=package_path)
-            spacy_model = spacy.load(spacy_model_name, disable=disable)
-
-        LOADED_SPACY_MODELS[options] = spacy_model
-    return LOADED_SPACY_MODELS[options]
 
 def import_submodules(package_name: str) -> None:
     """

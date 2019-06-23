@@ -1,44 +1,59 @@
+import logging
+import os
+import sys
 import torch
 import torchvision
 import torchvision.transforms as transforms
 
 from modules.training.trainer import Trainer
 from modules.models.model import Model
-from modules.models.simple_model import SimpleModel
+from modules.training.temperature_schedulers import InverseTimestepDecay
+from cifar10.simple_model import SimpleModel
+from cifar10.util import get_train_validation_loader, get_test_loader
+from cifar10.predictor import Predictor
 
+import config
 
-transform = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ]
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+train_loader, val_loader = get_train_validation_loader(
+    "./data", batch_size=config.BATCH_SIZE, validation_size=config.VALIDATION_SIZE, class_list=config.CLASS_LIST
 )
+test_loader = get_test_loader("./data", batch_size=config.BATCH_SIZE, class_list=config.CLASS_LIST)
 
-trainset = torchvision.datasets.CIFAR10(
-    root="./data", train=True, download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(
-    trainset, batch_size=4, shuffle=True, num_workers=2)
+if config.USING_PROGRESSIVE_LEARNING:
+    similarity_vectors_fn = os.path.join(config.SIMILARITY_VECTORS_PATH, "{}.th".format(config.SIMILARITY_VECTORS_FN))
+    temperature_scheduler = InverseTimestepDecay(t_initial=config.T_INITIAL, decay_rate=config.DECAY_RATE)
+else:
+    similarity_vectors_fn = None
+    temperature_scheduler = None
 
-testset = torchvision.datasets.CIFAR10(
-    root="./data", train=False, download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(
-    testset, batch_size=4, shuffle=True, num_workers=2)
-
-classes = ('plane', 'car', 'bird', 'cat', 'deer',
-           'dog', 'frog', 'horse', 'ship', 'truck')
-
-
-model = SimpleModel()
+model = SimpleModel(similarity_vectors_fn=similarity_vectors_fn)
 
 if torch.cuda.is_available():
-        cuda_device = 0
-        model = model.cuda(cuda_device)
-        print("GPU available.")
+    cuda_device = 0
+    model = model.cuda(cuda_device)
+    print("GPU available.")
 else:
     cuda_device = -1
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
-trainer = Trainer(model, optimizer, train_dataloader=trainloader, validation_dataloader=testloader, cuda_device=cuda_device)
+trainer = Trainer(
+    model,
+    optimizer,
+    train_dataloader=train_loader,
+    validation_dataloader=test_loader,
+    cuda_device=cuda_device,
+    num_epochs=config.NUM_EPOCHS,
+    serialization_dir=config.CHECKPOINTS_PATH,
+    patience=config.PATIENCE,
+    temperature_scheduler=temperature_scheduler
+)
 trainer.train()
-    
+
+predictor = Predictor(model, cuda_device=cuda_device)
+pred_metrics = predictor.predict(test_loader)
+print(pred_metrics)
+predictor.save_confusion_matrix()
+

@@ -27,6 +27,7 @@ from modules.training.tensorboard_writer import TensorboardWriter
 from modules.training.checkpointer import Checkpointer
 from modules.training import util as training_util
 from modules.training.moving_average import MovingAverage
+from modules.training.temperature_schedulers import TemperatureScheduler
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -57,6 +58,7 @@ class Trainer(TrainerBase):
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
         num_epochs: int = 20,
+        temperature_scheduler: Optional[TemperatureScheduler] = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device)
 
@@ -114,6 +116,7 @@ class Trainer(TrainerBase):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
+        self._temperature_scheduler = temperature_scheduler
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -137,6 +140,7 @@ class Trainer(TrainerBase):
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
 
+
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
@@ -146,7 +150,12 @@ class Trainer(TrainerBase):
         If ``for_training`` is `True` also applies regularization penalty.
         """
         batch = nn_util.move_to_device(batch, self._cuda_device)
-        output_dict = self.model(batch)
+
+        if self._temperature_scheduler is not None:
+            temperature = self._temperature_scheduler.get_temperature()
+        else:
+            temperature = None
+        output_dict = self.model(batch, temperature)
 
         try:
             loss = output_dict["loss"]
@@ -177,7 +186,6 @@ class Trainer(TrainerBase):
         train_loss = 0.0
         self.model.train()
 
-        num_training_batches = len(self.train_dataloader)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -191,9 +199,7 @@ class Trainer(TrainerBase):
 
         logger.info("Training")
 
-        train_dataloader_tqdm = Tqdm.tqdm(
-            self.train_dataloader, total=num_training_batches
-        )
+        train_dataloader_tqdm = Tqdm.tqdm(self.train_dataloader)
         cumulative_batch_size = 0
         for batch in train_dataloader_tqdm:
             batches_this_epoch += 1
@@ -292,6 +298,10 @@ class Trainer(TrainerBase):
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
+
+        # Update temperature after each epoch
+        if self._temperature_scheduler is not None:
+            self._temperature_scheduler.step()
         return metrics
 
     def _validation_loss(self) -> Tuple[float, int]:
@@ -306,10 +316,7 @@ class Trainer(TrainerBase):
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
 
-        num_validation_batches = len(self._validation_dataloader)
-        val_dataloader_tqdm = Tqdm.tqdm(
-            self._validation_dataloader, total=num_validation_batches
-        )
+        val_dataloader_tqdm = Tqdm.tqdm(self._validation_dataloader)
 
         batches_this_epoch = 0
         val_loss = 0
