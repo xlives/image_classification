@@ -19,9 +19,9 @@ import config
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 train_loader, val_loader = get_train_validation_loader(
-    "./data", batch_size=config.BATCH_SIZE, validation_size=config.VALIDATION_SIZE, class_list=config.CLASS_LIST
+    config.DATA_PATH, batch_size=config.BATCH_SIZE, validation_size=config.VALIDATION_SIZE, class_list=config.CLASS_LIST
 )
-test_loader = get_test_loader("./data", batch_size=config.BATCH_SIZE, class_list=config.CLASS_LIST)
+test_loader = get_test_loader(config.DATA_PATH, batch_size=config.BATCH_SIZE, class_list=config.CLASS_LIST)
 
 if config.USING_PROGRESSIVE_LEARNING:
     similarity_vectors_fn = os.path.join(config.SIMILARITY_VECTORS_PATH, "{}.th".format(config.SIMILARITY_VECTORS_FN))
@@ -43,7 +43,8 @@ else:
 optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
 if config.CLEAN_CHECKPOINTS_PATH:
-    shutil.rmtree(config.CHECKPOINTS_PATH)
+    if os.path.isdir(config.CHECKPOINTS_PATH):
+        shutil.rmtree(config.CHECKPOINTS_PATH)
 
 trainer = Trainer(
     model,

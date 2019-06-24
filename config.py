@@ -12,6 +12,7 @@ ALL_CLASS_LIST = [
 ]
 CLASS_LIST = ["bird", "cat", "deer", "dog", "frog", "horse"]
 
+DATA_PATH = "data/"
 FIGURES_PATH = "figures/"
 
 SIMILARITY_VECTORS_PATH = "similarity_vectors"
