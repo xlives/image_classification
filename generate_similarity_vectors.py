@@ -13,6 +13,32 @@ class Property(Enum):
     BIRD = auto()
     DEER = auto()
     HORSE = auto()
+    MAMMAL = auto()
+    AVES = auto()
+    AMPHIBIA = auto()
+    FOUR_LEGS = auto()
+    TWO_LEGS = auto()
+    FUR = auto()
+    GLANDULAR_SKIN = auto()
+    FEATHER = auto()
+    SIDE_EYES = auto()
+    FRONT_EYES = auto()
+    OUTER_EARS = auto()
+
+
+cat_property_set = [Property.ANIMAL, Property.CAT, Property.MAMMAL,
+                    Property.FOUR_LEGS, Property.FUR, Property.FRONT_EYES, Property.OUTER_EARS]
+dog_property_set = [Property.ANIMAL, Property.DOG, Property.MAMMAL,
+                    Property.FOUR_LEGS, Property.FUR, Property.FRONT_EYES, Property.OUTER_EARS]
+frog_property_set = [Property.ANIMAL, Property.FROG, Property.AMPHIBIA,
+                     Property.FOUR_LEGS, Property.GLANDULAR_SKIN, Property.SIDE_EYES]
+bird_property_set = [Property.ANIMAL, Property.BIRD, Property.AVES,
+                     Property.TWO_LEGS, Property.FEATHER, Property.SIDE_EYES]
+deer_property_set = [Property.ANIMAL, Property.DEER, Property.MAMMAL,
+                     Property.FOUR_LEGS, Property.FUR, Property.SIDE_EYES, Property.OUTER_EARS]
+horse_property_set = [Property.ANIMAL, Property.HORSE, Property.MAMMAL,
+                      Property.FOUR_LEGS, Property.FUR, Property.FRONT_EYES, Property.OUTER_EARS]
+
 
 weight = {
     Property.ANIMAL: 1,
@@ -22,15 +48,19 @@ weight = {
     Property.BIRD: 1,
     Property.DEER: 1,
     Property.HORSE: 1,
+    Property.MAMMAL: 1,
+    Property.AVES: 1,
+    Property.AMPHIBIA: 1,
+    Property.FOUR_LEGS: 1,
+    Property.TWO_LEGS: 1,
+    Property.FUR: 1,
+    Property.GLANDULAR_SKIN: 1,
+    Property.FEATHER: 1,
+    Property.FRONT_EYES: 1,
+    Property.SIDE_EYES: 1,
+    Property.OUTER_EARS: 1,
 }
 
-
-cat_property_set = [Property.ANIMAL, Property.CAT]
-dog_property_set = [Property.ANIMAL, Property.DOG]
-frog_property_set = [Property.ANIMAL, Property.FROG]
-bird_property_set = [Property.ANIMAL, Property.BIRD]
-deer_property_set = [Property.ANIMAL, Property.DEER]
-horse_property_set = [Property.ANIMAL, Property.HORSE]
 
 property_set_dict = {
     "cat": cat_property_set,
@@ -69,7 +99,7 @@ def create_similarity_matrix(filename="cifar10") -> torch.Tensor:
         similarity_vector_list.append(similarity_vector)
 
     similarity_matrix = torch.stack(similarity_vector_list)
-  
+
     if not os.path.isdir(config.SIMILARITY_VECTORS_PATH):
         os.makedirs(config.SIMILARITY_VECTORS_PATH)
 
