@@ -23,7 +23,7 @@ train_loader, val_loader = get_train_validation_loader(
 )
 test_loader = get_test_loader(config.DATA_PATH, batch_size=config.BATCH_SIZE, class_list=config.CLASS_LIST)
 
-if config.USING_PROGRESSIVE_LEARNING:
+if config.USE_PROGRESSIVE_LEARNING:
     similarity_vectors_fn = os.path.join(config.SIMILARITY_VECTORS_PATH, "{}.th".format(config.SIMILARITY_VECTORS_FN))
     temperature_scheduler = InverseTimestepDecay(t_initial=config.T_INITIAL, decay_rate=config.DECAY_RATE)
 else:
