@@ -12,7 +12,8 @@ from core.training.temperature_schedulers import InverseTimestepDecay
 from cifar10.model import CifarModel
 from cifar10.util import get_train_validation_loader, get_test_loader
 from cifar10.predictor import Predictor
-from cifar10.modules import SimpleConvNet
+from cifar10.modules import SimpleConvNet, EfficientNet
+from cifar10.modules.efficient_net import efficient_net_b0_cfg
 
 import config
 
@@ -30,7 +31,8 @@ else:
     similarity_vectors_fn = None
     temperature_scheduler = None
 
-core_module = SimpleConvNet(num_classes=len(config.CLASS_LIST))
+# core_module = SimpleConvNet(num_classes=len(config.CLASS_LIST))
+core_module = EfficientNet(cfg=efficient_net_b0_cfg, num_classes=len(config.CLASS_LIST))
 model = CifarModel(core_module=core_module, similarity_vectors_fn=similarity_vectors_fn)
 
 if torch.cuda.is_available():
