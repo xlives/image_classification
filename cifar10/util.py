@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+from PIL import Image
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -54,6 +55,7 @@ class DatasetMaker(Dataset):
     def __getitem__(self, i):
         class_label, index_wrt_class = self.index_of_which_bin(self.lengths, i)
         img = self.datasets[class_label][index_wrt_class]
+        img = Image.fromarray(img)
         img = self.transform(img)
         return img, class_label
 
@@ -194,7 +196,7 @@ def get_train_validation_loader(
     )
 
     if class_list is not None:
-        train_dataset = get_sub_dataset(train_dataset, class_list, validation_transform)
+        train_dataset = get_sub_dataset(train_dataset, class_list, train_transform)
         validation_dataset = get_sub_dataset(
             validation_dataset, class_list, validation_transform
         )

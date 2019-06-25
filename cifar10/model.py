@@ -3,12 +3,13 @@ from core.models.model import Model
 import torch.nn.functional as F
 from overrides import overrides
 from core.training.metrics import CategoricalAccuracy, Average
+from core.nn.regularizers import RegularizerApplicator
 import config
 
 
 class CifarModel(Model):
-    def __init__(self, core_module, similarity_vectors_fn: str = None):
-        super(CifarModel, self).__init__()
+    def __init__(self, core_module, similarity_vectors_fn: str = None, regularizer: RegularizerApplicator = None):
+        super().__init__(regularizer=regularizer)
 
         self.core_module = core_module
 
@@ -34,8 +35,8 @@ class CifarModel(Model):
             and temperature is not None
         ):
             similarity_vectors = self.similarity_vectors(labels)
-            similarity_targets = F.softmax(similarity_vectors / temperature, dim=1)
-            train_loss = F.kl_div(probs, similarity_targets, reduction="mean")
+            similarity_targets = F.softmax(similarity_vectors / temperature, dim=-1)
+            train_loss = F.kl_div(probs, similarity_targets, reduction="batchmean")
         else:
             train_loss = real_loss
         return train_loss, real_loss
