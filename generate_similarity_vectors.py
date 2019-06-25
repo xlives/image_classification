@@ -42,8 +42,8 @@ horse_property_set = [Property.ANIMAL, Property.HORSE, Property.MAMMAL,
 
 weight = {
     Property.ANIMAL: 1,
-    Property.DOG: 1,
-    Property.CAT: 1,
+    Property.DOG: 2,
+    Property.CAT: 2,
     Property.FROG: 1,
     Property.BIRD: 1,
     Property.DEER: 1,
@@ -76,7 +76,8 @@ def measure_similarity(class_a, class_b) -> float:
     property_set_a = property_set_dict[class_a]
     property_set_b = property_set_dict[class_b]
     intersection = [weight[p] for p in property_set_a if p in property_set_b]
-    similarity = sum(intersection)
+    union = [weight[p] for p in list(set(property_set_a + property_set_b))]
+    similarity = sum(intersection) / sum(union)
     return similarity
 
 
@@ -102,6 +103,8 @@ def create_similarity_matrix(filename="cifar10") -> torch.Tensor:
 
     if not os.path.isdir(config.SIMILARITY_VECTORS_PATH):
         os.makedirs(config.SIMILARITY_VECTORS_PATH)
+
+    print(similarity_matrix)
 
     torch.save(
         similarity_matrix,

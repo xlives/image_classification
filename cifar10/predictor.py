@@ -1,4 +1,5 @@
 import torch
+from typing import List
 import os
 from core.models.model import Model
 from core.nn import util as nn_util
@@ -7,22 +8,29 @@ from core.common.tqdm import Tqdm
 from core.common.checks import ConfigurationError
 import numpy as np
 import matplotlib.pyplot as plt
-import config
 
 
 class Predictor:
-    def __init__(self, model: Model, cuda_device: int = -1):
+    def __init__(
+        self,
+        model: Model,
+        class_list: List[str],
+        figure_path: str,
+        cuda_device: int = -1,
+    ):
         self.model = model
         self.cuda_device = cuda_device
+        self.class_list = class_list
+        self.figure_path = figure_path
 
         self.reset()
 
     def reset(self):
-        num_classes = len(config.CLASS_LIST)
+        num_classes = len(self.class_list)
         self.confusion_matrix = torch.zeros((num_classes, num_classes))
 
     def update_confusion_matrix(self, logits, labels):
-        num_classes = len(config.CLASS_LIST)
+        num_classes = len(self.class_list)
         assert logits.size(-1) == num_classes
 
         if labels.dim() != logits.dim() - 1:
@@ -48,7 +56,11 @@ class Predictor:
 
     def save_confusion_matrix(self, name="cifar10_confusion_matrix"):
         save_confusion_matrix_figure(
-            name, self.confusion_matrix.numpy(), config.CLASS_LIST, config.CLASS_LIST
+            self.figure_path,
+            name,
+            self.confusion_matrix.numpy(),
+            self.class_list,
+            self.class_list,
         )
 
     def predict(self, dataloader: torch.utils.data.DataLoader):
@@ -87,7 +99,7 @@ class Predictor:
         return pred_metrics
 
 
-def save_confusion_matrix_figure(name, matrix, xlabels, ylabels):
+def save_confusion_matrix_figure(path, name, matrix, xlabels, ylabels):
     plt.figure()
 
     plt.matshow(matrix, cmap="viridis")
@@ -101,16 +113,17 @@ def save_confusion_matrix_figure(name, matrix, xlabels, ylabels):
         for j in range(matrix.shape[1]):
             count = int(matrix[i][j])
             percentage = count / row_sum * 100
+            color = "black" if percentage > 50 else "white"
             plt.text(
                 j,
                 i,
                 "{:0.1f}% ({:d})".format(percentage, count),
                 ha="center",
                 va="center",
-                color="silver",
+                color=color,
                 fontsize=5,
             )
 
-    if not os.path.isdir(config.FIGURES_PATH):
-        os.makedirs(config.FIGURES_PATH)
-    plt.savefig(os.path.join(config.FIGURES_PATH, "{}.pdf".format(name)))
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    plt.savefig(os.path.join(path, "{}.pdf".format(name)))

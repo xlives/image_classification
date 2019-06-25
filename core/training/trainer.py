@@ -28,6 +28,7 @@ from core.training.checkpointer import Checkpointer
 from core.training import util as training_util
 from core.training.moving_average import MovingAverage
 from core.training.temperature_schedulers import TemperatureScheduler
+from core.training.custom_logger import CustomLogger
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -59,6 +60,7 @@ class Trainer(TrainerBase):
         moving_average: Optional[MovingAverage] = None,
         num_epochs: int = 20,
         temperature_scheduler: Optional[TemperatureScheduler] = None,
+        custom_logger: Optional[CustomLogger] = None
     ) -> None:
         super().__init__(serialization_dir, cuda_device)
 
@@ -139,6 +141,8 @@ class Trainer(TrainerBase):
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
+
+        self._custom_logger = custom_logger
 
 
     def rescale_gradients(self) -> Optional[float]:
@@ -465,6 +469,9 @@ class Trainer(TrainerBase):
                     datetime.timedelta(seconds=int(estimated_time_remaining))
                 )
                 logger.info("Estimated training time remaining: %s", formatted_time)
+
+            if self._custom_logger is not None:
+                self._custom_logger.log_epoch(epoch)
 
             epochs_trained += 1
 

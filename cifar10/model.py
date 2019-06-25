@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from overrides import overrides
 from core.training.metrics import CategoricalAccuracy, Average
 from core.nn.regularizers import RegularizerApplicator
-import config
 
 
 class CifarModel(Model):

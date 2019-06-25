@@ -15,6 +15,7 @@ from cifar10.util import get_train_validation_loader, get_test_loader
 from cifar10.predictor import Predictor
 from cifar10.modules import SimpleConvNet, EfficientNet
 from cifar10.modules.efficient_net import efficient_net_b0_cfg
+from cifar10.logger import CifarLogger
 
 import config
 
@@ -28,9 +29,11 @@ test_loader = get_test_loader(config.DATA_PATH, batch_size=config.BATCH_SIZE, cl
 if config.USE_PROGRESSIVE_LEARNING:
     similarity_vectors_fn = os.path.join(config.SIMILARITY_VECTORS_PATH, "{}.th".format(config.SIMILARITY_VECTORS_FN))
     temperature_scheduler = InverseTimestepDecay(t_initial=config.T_INITIAL, decay_rate=config.DECAY_RATE)
+    experiment_name = "T0={}, decay_rate={}".format(config.T_INITIAL, config.DECAY_RATE)
 else:
     similarity_vectors_fn = None
     temperature_scheduler = None
+    experiment_name = "no_progressive_learning"
 
 core_module = SimpleConvNet(num_classes=len(config.CLASS_LIST))
 # core_module = EfficientNet(cfg=efficient_net_b0_cfg, num_classes=len(config.CLASS_LIST))
@@ -46,9 +49,16 @@ else:
 # optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 optimizer = torch.optim.SGD(model.parameters(), lr=config.LEARNING_RATE, momentum=config.MOMENTUM, weight_decay=config.WEIGHT_DECAY)
 
+
+figure_path = os.path.join(config.FIGURES_PATH, experiment_name)
+serialization_dir = os.path.join(config.CHECKPOINTS_PATH, experiment_name)
+
 if config.CLEAN_CHECKPOINTS_PATH:
-    if os.path.isdir(config.CHECKPOINTS_PATH):
-        shutil.rmtree(config.CHECKPOINTS_PATH)
+    if os.path.isdir(serialization_dir):
+        shutil.rmtree(serialization_dir)
+
+predictor = Predictor(model, class_list=config.CLASS_LIST, figure_path=figure_path, cuda_device=cuda_device)
+custom_logger = CifarLogger(predictor, test_loader, config.LOG_EPOCH_INTERVAL)
 
 trainer = Trainer(
     model,
@@ -57,15 +67,14 @@ trainer = Trainer(
     validation_dataloader=test_loader,
     cuda_device=cuda_device,
     num_epochs=config.NUM_EPOCHS,
-    serialization_dir=config.CHECKPOINTS_PATH,
+    serialization_dir=serialization_dir,
     patience=config.PATIENCE,
     temperature_scheduler=temperature_scheduler,
-    
+    custom_logger=custom_logger,
 )
 trainer.train()
 
-predictor = Predictor(model, cuda_device=cuda_device)
 pred_metrics = predictor.predict(test_loader)
 print(pred_metrics)
-predictor.save_confusion_matrix()
+predictor.save_confusion_matrix("best, accuracy={:.4f}".format(pred_metrics["accuracy"]))
 

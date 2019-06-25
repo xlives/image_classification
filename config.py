@@ -14,12 +14,13 @@ CLASS_LIST = ["bird", "cat", "deer", "dog", "frog", "horse"]
 
 DATA_PATH = "data/"
 FIGURES_PATH = "figures/"
+LOG_EPOCH_INTERVAL = 10
 
 SIMILARITY_VECTORS_PATH = "similarity_vectors"
 SIMILARITY_VECTORS_FN = "cifar10"
 
-CHECKPOINTS_PATH = "trained_models/checkpoints_wp"
-CLEAN_CHECKPOINTS_PATH = True
+CHECKPOINTS_PATH = "trained_models/"
+CLEAN_CHECKPOINTS_PATH = False
 
 AUGMENT_DATA = True
 BATCH_SIZE = 128
