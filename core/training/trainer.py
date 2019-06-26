@@ -303,9 +303,6 @@ class Trainer(TrainerBase):
         for (gpu_num, memory) in gpu_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
 
-        # Update temperature after each epoch
-        if self._temperature_scheduler is not None:
-            self._temperature_scheduler.step()
         return metrics
 
     def _validation_loss(self) -> Tuple[float, int]:
@@ -471,7 +468,15 @@ class Trainer(TrainerBase):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             if self._custom_logger is not None:
-                self._custom_logger.log_epoch(epoch)
+                if self._temperature_scheduler is not None:
+                    temperature = self._temperature_scheduler.get_temperature()
+                else:
+                    temperature = None
+                self._custom_logger.log_epoch(epoch, temperature=temperature)
+
+            # Update temperature after each epoch
+            if self._temperature_scheduler is not None:
+                self._temperature_scheduler.step()
 
             epochs_trained += 1
 

@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import torch
+import datetime
 import shutil
 import torchvision
 import torchvision.transforms as transforms
@@ -35,6 +36,9 @@ else:
     temperature_scheduler = None
     experiment_name = "no_progressive_learning"
 
+time_now = datetime.datetime.now().strftime("%m-%d-%Y, %H-%M-%S")
+experiment_name += " time={}".format(time_now)
+
 core_module = SimpleConvNet(num_classes=len(config.CLASS_LIST))
 # core_module = EfficientNet(cfg=efficient_net_b0_cfg, num_classes=len(config.CLASS_LIST))
 model = CifarModel(core_module=core_module, similarity_vectors_fn=similarity_vectors_fn)
@@ -52,10 +56,6 @@ optimizer = torch.optim.SGD(model.parameters(), lr=config.LEARNING_RATE, momentu
 
 figure_path = os.path.join(config.FIGURES_PATH, experiment_name)
 serialization_dir = os.path.join(config.CHECKPOINTS_PATH, experiment_name)
-
-if config.CLEAN_CHECKPOINTS_PATH:
-    if os.path.isdir(serialization_dir):
-        shutil.rmtree(serialization_dir)
 
 predictor = Predictor(model, class_list=config.CLASS_LIST, figure_path=figure_path, cuda_device=cuda_device)
 custom_logger = CifarLogger(predictor, test_loader, config.LOG_EPOCH_INTERVAL)

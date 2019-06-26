@@ -17,4 +17,9 @@ class CifarLogger(CustomLogger):
         name = "epoch={:d}, accuracy={:.4f}".format(epoch, pred_metrics["accuracy"])
         self.predictor.save_confusion_matrix(name)
 
+        temperature = kwargs["temperature"]
+        if temperature is not None:
+            name = "epoch={:d}, temperature={:.4f}".format(epoch, temperature)
+            self.predictor.save_similarity_matrix(name, temperature)
+
         

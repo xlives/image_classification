@@ -54,6 +54,16 @@ class Predictor:
             label, pred = label.item(), pred.item()
             self.confusion_matrix[label][pred] += 1
 
+    def save_similarity_matrix(self, name, temperature):
+        if self.model.similarity_vectors is None:
+            return
+        similarity_matrix = self.model.similarity_vectors.weight.data
+        similarity_matrix = torch.nn.functional.softmax(similarity_matrix / temperature, dim=-1)
+        similarity_matrix = similarity_matrix.cpu().numpy()
+        save_similarity_matrix_figure(
+            self.figure_path, name, similarity_matrix, self.class_list, self.class_list
+        )
+
     def save_confusion_matrix(self, name="cifar10_confusion_matrix"):
         save_confusion_matrix_figure(
             self.figure_path,
@@ -93,10 +103,36 @@ class Predictor:
                 pred_metrics = training_util.get_metrics(
                     self.model, pred_loss, batches_this_epoch
                 )
-                description = training_util.description_from_metrics(pred_metrics)
+                description = training_util.description_from_metrics(
+                    pred_metrics)
                 dataloader_tqdm.set_description(description, refresh=False)
 
         return pred_metrics
+
+
+def save_similarity_matrix_figure(path, name, matrix, xlabels, ylabels):
+    plt.figure()
+
+    plt.matshow(matrix, cmap="viridis")
+    plt.xticks(np.arange(len(xlabels)), xlabels, rotation=90, fontsize=5)
+    plt.yticks(np.arange(len(ylabels)), ylabels, fontsize=5)
+
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            color = "black" if matrix[i][j] > 0.5 else "white"
+            plt.text(
+                j,
+                i,
+                "{:.5f}".format(matrix[i][j]),
+                ha="center",
+                va="center",
+                color=color,
+                fontsize=5,
+            )
+
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    plt.savefig(os.path.join(path, "{}.pdf".format(name)))
 
 
 def save_confusion_matrix_figure(path, name, matrix, xlabels, ylabels):
